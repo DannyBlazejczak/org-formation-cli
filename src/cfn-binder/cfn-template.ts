@@ -256,7 +256,8 @@ export class CfnTemplate {
 
         const template = JSON.parse(JSON.stringify(this.resultingTemplate, options.outputCrossAccountExports ? undefined : replacer));
         if (options.output === 'json') {
-            return JSON.stringify(template, null, 2);
+            // DBLA: reduce the size of the templates by reducing the number of spaces from 2 to 1. This could be further reduced by setting no spaces.
+            return JSON.stringify(template, null, 1);
         } else {
             return yamlDump(template);
         }
@@ -268,7 +269,8 @@ export class CfnTemplate {
         if (addBogusTransform && template.Transform === undefined) {
             template.Transform = 'bogus-transform-to-allow-custom-types-to-pass-validation';
         }
-        return JSON.stringify(template, null, 2);
+        // DBLA: reduce the size of the templates by reducing the number of spaces from 2 to 1. This could be further reduced by setting no spaces.
+        return JSON.stringify(template, null, 1);
     }
 
     private _removeCrossAccountDependsOn(resource: any, resourceIdsForTarget: string[], allResourceIds: string[]): void {
