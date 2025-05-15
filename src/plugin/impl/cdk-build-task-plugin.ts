@@ -124,7 +124,12 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             Validator.throwForUnresolvedExpressions(task.customDeployCommand, 'CustomDeployCommand');
             command = task.customDeployCommand as string;
         } else {
-            const commandExpression = { 'Fn::Sub': 'npx cdk deploy --all --require-approval=never ${CurrentTask.Parameters}' } as ICfnSubExpression;
+            // DBLA:
+            // --ci: Output logs to stdout iso stderr
+            // --method direct: speeds up cdk deploy. There is no need to do a change-set at this point.
+            // --no-notices: suppresses cdk notices
+            // --version-reporting false: suppresses AWS::CDK::Metadata
+            const commandExpression = { 'Fn::Sub': 'npx cdk deploy --all --require-approval never --ci --method direct --no-notices --version-reporting false ${CurrentTask.Parameters}' } as ICfnSubExpression;
             command = await resolver.resolveSingleExpression(commandExpression, 'CustomDeployCommand');
 
             if (task.runNpmBuild) {
@@ -136,9 +141,9 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             }
 
             if (task.maxConcurrent > 1) {
-                // DBLA: add space
+                // DBLA: add space + add region for parallel cdk deployments in multiple regions
                 // https://github.com/org-formation/org-formation-cli/issues/602
-                command = command + ` --output cdk.out/${target.accountId}`;
+                command = command + ` --output cdk.out/${target.accountId}/${target.region}`;
             }
         }
 
@@ -156,7 +161,9 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             Validator.throwForUnresolvedExpressions(task.customRemoveCommand, 'CustomRemoveCommand');
             command = task.customRemoveCommand as string;
         } else {
-            const commandExpression = { 'Fn::Sub': 'npx cdk destroy --all --force ${CurrentTask.Parameters}' } as ICfnSubExpression;
+            // DBLA:
+            // --ci: Output logs to stdout iso stderr
+            const commandExpression = { 'Fn::Sub': 'npx cdk destroy --all --force --ci ${CurrentTask.Parameters}' } as ICfnSubExpression;
             command = await resolver.resolveSingleExpression(commandExpression, 'CustomRemoveCommand');
 
             if (task.runNpmBuild) {
@@ -168,9 +175,9 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             }
 
             if (task.maxConcurrent > 1) {
-                // DBLA: add space
+                // DBLA: add space + add region for parallel cdk deployments in multiple regions
                 // https://github.com/org-formation/org-formation-cli/issues/602
-                command = command + ` --output cdk.out/${target.accountId}`;
+                command = command + ` --output cdk.out/${target.accountId}/${target.region}`;
             }
         }
 
