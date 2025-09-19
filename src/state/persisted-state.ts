@@ -222,7 +222,26 @@ export class PersistedState {
             return;
         }
 
-        const names = namespaces[namespace];
+        let names = namespaces[namespace];
+        if (names === undefined) {
+            // DBLA: Cleanup plugin tasks do not delete the tasks. This method was invoked for the copy-to-s3 tasks.
+            // For the cleanup the logicalNamePrefix (aka namespace) is undefined. This will work when not using "Type: include".
+            // But with "Type: include", the state is saved with a namespace like "AwsIic" (for IIC S3 tasks).
+            // This namespace is stored in the state, but is not propagated when using the cleanup commands.
+            // Hence this looks up the namespace from the "name" which related to the copy-to-s3 task name.
+            let searchCounter = 0;
+            for (const searchNamespace of Object.keys(namespaces)) {
+                if (namespaces[searchNamespace][logicalName] !== undefined) {
+                    names = namespaces[searchNamespace];
+                    // The name must be unique across namespaces to avoid potentially deleting the wrong stack.
+                    searchCounter++;
+                    if (searchCounter > 1) {
+                        names = undefined;
+                        break;
+                    }
+                }
+            }
+        }        
         if (!names) {
             return;
         }
@@ -245,6 +264,7 @@ export class PersistedState {
             if (Object.keys(accounts).length === 0) {
                 delete names[logicalName];
 
+                // DBLA This does not look quite right to me - but the namespace is set to 'default' so this doesn't delete the whole include tree.
                 if (Object.keys(names).length === 0) {
                     delete namespaces[namespace];
 
@@ -415,7 +435,26 @@ export class PersistedState {
             return [];
         }
 
-        const nameDict = namespaceDict[namespace];
+        let nameDict = namespaceDict[namespace];
+        if (nameDict === undefined) {
+            // DBLA: Cleanup plugin tasks do not delete the tasks. This method was invoked for the cdk-update tasks.
+            // For the cleanup the logicalNamePrefix (aka namespace) is undefined. This will work when not using "Type: include".
+            // But with "Type: include", the state is saved with a namespace like "VpcBuilderCdk" or "ServiceQuotas".
+            // This namespace is stored in the state, but is not propagated when using the cleanup commands.
+            // Hence this looks up the namespace from the "name" which can be a stackname or cdk stack name.
+            let searchCounter = 0;
+            for (const searchNamespace of Object.keys(namespaceDict)) {
+                if (namespaceDict[searchNamespace][name] !== undefined) {
+                    nameDict = namespaceDict[searchNamespace];
+                    // The name must be unique across namespaces to avoid potentially deleting the wrong stack.
+                    searchCounter++;
+                    if (searchCounter > 1) {
+                        nameDict = undefined;
+                        break;
+                    }
+                }
+            }
+        }
         if (nameDict === undefined) {
             return [];
         }

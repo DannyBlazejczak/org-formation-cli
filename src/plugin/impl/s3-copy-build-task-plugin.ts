@@ -95,8 +95,12 @@ export class CopyToS3TaskPlugin implements IBuildTaskPlugin<IS3CopyBuildTaskConf
             serverSideEncryption: command.serverSideEncryption,
         };
     }
-    getPhysicalIdForCleanup(): string {
-        return undefined;
+    // DBLA: Return a PhysicalISForCleanup. These get tracked in the state.json and used to determine if a task has needs to be delete (performRemove).
+    // getPhysicalIdForCleanup(): string {
+    //     return undefined;
+    // }
+    getPhysicalIdForCleanup(config: IS3CopyBuildTaskConfig): string {
+        return config.LogicalName;
     }
 
     async performRemove(binding: IPluginBinding<IS3CopyTask>): Promise<void> {

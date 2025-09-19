@@ -67,7 +67,7 @@ export class PluginBinder<TTaskDefinition extends IPluginTask> {
                 result.push(binding);
             }
         }
-
+        // This checks if a task with changed accounts or region bindings needs specific bindings deleted.
         const targetsInState = this.state.enumGenericTargets<TTaskDefinition>(this.task.type, this.organizationLogicalName, this.logicalNamePrefix, this.task.name);
         for (const targetToBeDeleted of targetsInState.filter(x => !result.find(y => y.target.accountId === x.accountId && y.target.region === x.region))) {
             if (AwsUtil.GetEnabledRegions().indexOf(targetToBeDeleted.region) > -1) {

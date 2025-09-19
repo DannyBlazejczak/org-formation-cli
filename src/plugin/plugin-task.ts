@@ -102,8 +102,10 @@ export class PluginBuildTaskProvider<TBuildTaskConfiguration extends IBuildTaskC
                         command.state.setGenericTarget(target);
                     }
                 } else {
-                    ConsoleUtil.LogInfo(`executing: ${this.type} ${logicalId}`);
-                    await RemoveCommand.Perform({ ...command, name: logicalId, type: this.plugin.type, maxConcurrentTasks, failedTasksTolerance: 10 });
+                    ConsoleUtil.LogInfo(`Executing Cleanup: ${this.type} ${logicalId}`);
+                    // DBLA: set default if MaxConcurrentTasks being undefined.
+                    // await RemoveCommand.Perform({ ...command, name: logicalId, type: this.plugin.type, maxConcurrentTasks, failedTasksTolerance: 10 });
+                    await RemoveCommand.Perform({ ...command, name: logicalId, type: this.plugin.type, maxConcurrentTasks: maxConcurrentTasks ?? command.maxConcurrentTasks ?? 1, failedTasksTolerance: command.failedTasksTolerance ?? 0 });
                 }
             },
         };

@@ -140,11 +140,12 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
                 command = PluginUtil.PrependNpmInstall(task.path, command);
             }
 
-            if (task.maxConcurrent > 1) {
-                // DBLA: add space + add region for parallel cdk deployments in multiple regions
-                // https://github.com/org-formation/org-formation-cli/issues/602
-                command = command + ` --output cdk.out/${target.accountId}/${target.region}`;
-            }
+            // DBLA: multiple cdk stacks might still run in parallel even if MaxConcurrentTasks=1
+            // if (task.maxConcurrent > 1) {
+            // }
+            // DBLA: add space + add region for parallel cdk deployments in multiple regions
+            // https://github.com/org-formation/org-formation-cli/issues/602
+            command = command + ` --output cdk.out/${target.accountId}/${target.region}`;
         }
 
         const accountId = target.accountId;
@@ -163,7 +164,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
         } else {
             // DBLA:
             // --ci: Output logs to stdout iso stderr
-            const commandExpression = { 'Fn::Sub': 'npx cdk destroy --all --force --ci ${CurrentTask.Parameters}' } as ICfnSubExpression;
+            const commandExpression = { 'Fn::Sub': 'npx cdk destroy --all --force --ci --no-notices ${CurrentTask.Parameters}' } as ICfnSubExpression;
             command = await resolver.resolveSingleExpression(commandExpression, 'CustomRemoveCommand');
 
             if (task.runNpmBuild) {
@@ -174,11 +175,12 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
                 command = PluginUtil.PrependNpmInstall(task.path, command);
             }
 
-            if (task.maxConcurrent > 1) {
-                // DBLA: add space + add region for parallel cdk deployments in multiple regions
-                // https://github.com/org-formation/org-formation-cli/issues/602
-                command = command + ` --output cdk.out/${target.accountId}/${target.region}`;
-            }
+            // DBLA: MaxConcurrent=1, but multiple stacks are deleted in parallel. So this is always required!!
+            // if (task.maxConcurrent > 1) {
+            // }
+            // DBLA: add space + add region for parallel cdk deployments in multiple regions
+            // https://github.com/org-formation/org-formation-cli/issues/602
+            command = command + ` --output cdk.out/${target.accountId}/${target.region}`;
         }
 
         const accountId = target.accountId;
@@ -206,9 +208,12 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             CDK_DEPLOY_ACCOUNT: target.accountId,
         };
     }
-
-    getPhysicalIdForCleanup(): string {
-        return undefined;
+    // DBLA: Return a PhysicalISForCleanup. These get tracked in the state.json and used to determine if a task has needs to be delete (performRemove).
+    // getPhysicalIdForCleanup(): string {
+    //     return undefined;
+    // }
+    getPhysicalIdForCleanup(config: ICdkBuildTaskConfig): string {
+        return config.LogicalName;
     }
 
     static GetParametersAsArgument(parameters: Record<string, any>): string {
