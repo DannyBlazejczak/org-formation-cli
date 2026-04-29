@@ -336,10 +336,13 @@ export class AwsOrganizationWriter {
             try {
                 await this.updateAccount(resource, accountId);
             } catch (err) {
-                if ((err.name === 'AccessDenied' || err.name === 'InvalidClientTokenId') && retryCountAccessDenied < 3) {
+                // ERROR: Task OrganizationUpdate execute failed. reason: User: xxx is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::<subaccount>:role/OrganizationAccountAccessRole
+                // This is a timing issue. It takes typically less than 2 minutes, but can take up to 5 minutes for the "OrganizationAccountAccessRole" for AWS to automatically create the role in the newly created account.
+                // DBLA: increased retries (3 to 12) and timeouts (3000ms to 30000ms) for the retry. So this will retry up to 6 minutes.
+                if ((err.name === 'AccessDenied' || err.name === 'InvalidClientTokenId') && retryCountAccessDenied < 12) {
                     shouldRetry = true;
                     retryCountAccessDenied = retryCountAccessDenied + 1;
-                    await sleep(3000);
+                    await sleep(30000);
                     continue;
                 }
                 throw err;
@@ -375,10 +378,13 @@ export class AwsOrganizationWriter {
                 await this.updateAccount(resource, result.AccountId);
                 await partitionWriter.updateAccount(resource, result.GovCloudAccountId);
             } catch (err) {
-                if ((err.name === 'AccessDenied' || err.name === 'InvalidClientTokenId') && retryCountAccessDenied < 3) {
+                // ERROR: Task OrganizationUpdate execute failed. reason: User: xxx is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::<subaccount>:role/OrganizationAccountAccessRole
+                // This is a timing issue. It takes typically less than 2 minutes, but can take up to 5 minutes for the "OrganizationAccountAccessRole" for AWS to automatically create the role in the newly created account.
+                // DBLA: increased retries (3 to 12) and timeouts (3000ms to 30000ms) for the retry. So this will retry up to 6 minutes.
+                if ((err.name === 'AccessDenied' || err.name === 'InvalidClientTokenId') && retryCountAccessDenied < 12) {
                     shouldRetry = true;
                     retryCountAccessDenied = retryCountAccessDenied + 1;
-                    await sleep(3000);
+                    await sleep(30000);
                     continue;
                 }
                 throw err;
