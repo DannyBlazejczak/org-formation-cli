@@ -24,7 +24,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
 
         Validator.ThrowForUnknownAttribute(config, config.LogicalName, ...CommonTaskAttributeNames, 'Path',
             'FilePath', 'RunNpmInstall', 'RunNpmBuild', 'FailedTaskTolerance', 'MaxConcurrentTasks',
-            'AdditionalCdkArguments', 'InstallCommand', 'CustomDeployCommand', 'CustomRemoveCommand', 'Parameters', 'IgnoreFileChanges');
+            'AdditionalCdkArguments', 'InstallCommand', 'CustomDeployCommand', 'CustomRemoveCommand', 'Parameters', 'Qualifier', 'IgnoreFileChanges');
 
         if (!config.Path) {
             throw new OrgFormationError(`task ${config.LogicalName} does not have required attribute Path`);
@@ -46,6 +46,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             customDeployCommand: config.CustomDeployCommand,
             customRemoveCommand: config.CustomRemoveCommand,
             parameters: config.Parameters,
+            qualifier: config.Qualifier,
             ignoreFileChanges: Array.isArray(config.IgnoreFileChanges) ? config.IgnoreFileChanges : typeof config.IgnoreFileChanges === 'string' ? [config.IgnoreFileChanges] : [],
         };
     }
@@ -86,6 +87,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             customDeployCommand: command.customDeployCommand,
             customRemoveCommand: command.customRemoveCommand,
             parameters: command.parameters,
+            qualifier: command.qualifier,
         };
     }
 
@@ -102,6 +104,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             customDeployCommand: command.customDeployCommand,
             customRemoveCommand: command.customRemoveCommand,
             parameters: command.parameters,
+            qualifier: command.qualifier,
             forceDeploy: typeof command.forceDeploy === 'boolean' ? command.forceDeploy : false,
             logVerbose: typeof command.verbose === 'boolean' ? command.verbose : false,
         };
@@ -129,7 +132,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
             // --method direct: speeds up cdk deploy. There is no need to do a change-set at this point.
             // --no-notices: suppresses cdk notices
             // --version-reporting false: suppresses AWS::CDK::Metadata
-            const commandExpression = { 'Fn::Sub': 'npx cdk deploy --all --require-approval never --ci --method direct --no-notices --version-reporting false ${CurrentTask.Parameters}' } as ICfnSubExpression;
+            const commandExpression = { 'Fn::Sub': 'npx cdk deploy --all --require-approval never --ci --method direct --no-notices --version-reporting false ${CurrentTask.Qualifier} ${CurrentTask.Parameters}' } as ICfnSubExpression;
             command = await resolver.resolveSingleExpression(commandExpression, 'CustomDeployCommand');
 
             if (task.runNpmBuild) {
@@ -164,7 +167,7 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
         } else {
             // DBLA:
             // --ci: Output logs to stdout iso stderr
-            const commandExpression = { 'Fn::Sub': 'npx cdk destroy --all --force --ci --no-notices ${CurrentTask.Parameters}' } as ICfnSubExpression;
+            const commandExpression = { 'Fn::Sub': 'npx cdk destroy --all --force --ci --no-notices ${CurrentTask.Qualifier} ${CurrentTask.Parameters}' } as ICfnSubExpression;
             command = await resolver.resolveSingleExpression(commandExpression, 'CustomRemoveCommand');
 
             if (task.runNpmBuild) {
@@ -194,7 +197,9 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
         const p = await resolver.resolve(task.parameters);
         const collapsed = await resolver.collapse(p);
         const parametersAsString = CdkBuildTaskPlugin.GetParametersAsArgument(collapsed);
-        resolver.addResourceWithAttributes('CurrentTask', { Parameters: parametersAsString, AccountId: binding.target.accountId });
+        const qualifier = await resolver.resolveSingleExpression(task.qualifier, 'Qualifier');
+        const contextWithQualifier = CdkBuildTaskPlugin.BuildContextWithQualifierAsArgument(qualifier);
+        resolver.addResourceWithAttributes('CurrentTask', { Parameters: parametersAsString, Qualifier: contextWithQualifier, AccountId: binding.target.accountId });
     }
 
     static GetEnvironmentVariables(target: IGenericTarget<ICdkTask>): Record<string, string> {
@@ -221,6 +226,11 @@ export class CdkBuildTaskPlugin implements IBuildTaskPlugin<ICdkBuildTaskConfig,
         const entries = Object.entries(parameters);
         return entries.reduce((prev, curr) => prev + ` -c '${curr[0]}=${curr[1]}'`, '');
     }
+
+    static BuildContextWithQualifierAsArgument(qualifier?: string): string {
+        if (!qualifier) { return ''; }
+        return `--context @aws-cdk/core:bootstrapQualifier=${qualifier}`;
+    }
 }
 
 
@@ -233,6 +243,7 @@ interface ICdkBuildTaskConfig extends IBuildTaskConfiguration {
     RunNpmBuild?: boolean;
     CustomDeployCommand?: string;
     CustomRemoveCommand?: string;
+    Qualifier?: ICfnExpression;
     Parameters?: Record<string, ICfnExpression>;
     IgnoreFileChanges?: string | string[];
 }
@@ -243,6 +254,7 @@ export interface ICdkCommandArgs extends IBuildTaskPluginCommandArgs {
     runNpmBuild: boolean;
     customDeployCommand?: string;
     customRemoveCommand?: string;
+    qualifier?: ICfnExpression;
     parameters?: Record<string, ICfnExpression>;
     ignoreFileChanges?: string[];
 }
@@ -254,5 +266,5 @@ export interface ICdkTask extends IPluginTask {
     maxConcurrent?: number;
     customDeployCommand?: ICfnExpression;
     customRemoveCommand?: ICfnExpression;
+    qualifier?: ICfnExpression;
 }
-
