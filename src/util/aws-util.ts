@@ -311,7 +311,7 @@ export class AwsUtil {
         return this.OrganizationsServiceCache[cacheKey];
     }
 
-    public static GetEc2Service(accountId?: string, region?: string, roleInTargetAccount?: string, viaRoleArn?: string, isPartition?: boolean): OrganizationsClient {
+    public static GetEc2Service(accountId?: string, region?: string, roleInTargetAccount?: string, viaRoleArn?: string, isPartition?: boolean): EC2Client {
         AwsUtil.throwIfNowInitiazized();
         const { cacheKey, provider } = AwsUtil.GetCredentialProviderWithRoleAssumptions({
             accountId,

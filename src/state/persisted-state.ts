@@ -241,7 +241,7 @@ export class PersistedState {
                     }
                 }
             }
-        }        
+        }
         if (!names) {
             return;
         }

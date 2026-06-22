@@ -555,9 +555,10 @@ export class AwsOrganizationWriter {
                 AccountId: physicalId,
             });
             await this.organizationsService.send(closeAccountCommand);
-            let account: Organizations.Account = { Status: 'PENDING_CLOSURE' };
-            while (account.Status !== 'SUSPENDED') {
-                if (account.Status === 'ACTIVE') {
+            let account: Organizations.Account = { State: 'PENDING_CLOSURE' };
+            let accountState = account.State || account.Status;
+            while (accountState !== 'CLOSED' && accountState !== 'SUSPENDED') {
+                if (accountState === 'ACTIVE') {
                     throw new OrgFormationError('deleting account failed');
                 }
                 const describeAccountStatusCommand = new Organizations.DescribeAccountCommand({
@@ -566,6 +567,7 @@ export class AwsOrganizationWriter {
                 await sleep(1000);
                 const response = await this.organizationsService.send(describeAccountStatusCommand);
                 account = response.Account;
+                accountState = account.State || account.Status;
             }
         });
     }

@@ -114,12 +114,10 @@ export class BuildConfiguration {
                         predefinedAccounts: Object.entries((annotateTaskConfig.AccountMapping ?? {})).map(x=> ({
                             logicalName: x[0],
                             id: String(x[1]),
-                            properties: undefined,
                         })),
                         predefinedOUs: Object.entries((annotateTaskConfig.OrganizationalUnitMapping ?? {})).map(x => ({
                             logicalName: x[0],
                             id: String(x[1]),
-                            properties: undefined,
                         })),
                     }
                 );

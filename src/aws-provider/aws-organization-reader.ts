@@ -239,7 +239,8 @@ export class AwsOrganizationReader {
                     const accounts = resp.Accounts?.filter(x=>!excludeAccountIds.includes(x.Id));
 
                     const getAccount = async (acc: Organizations.Account): Promise<void> => {
-                        if (acc.Status === 'SUSPENDED') {
+                        const accountState = acc.State || acc.Status;
+                        if (accountState !== undefined && accountState !== 'ACTIVE') {
                             return;
                         }
 
