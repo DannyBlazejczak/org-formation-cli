@@ -18,8 +18,3 @@ tmp/
 .terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.backup
-
-# Graphify
-graphify-out/cost.json
-graphify-out/cache
-graphify-out/.graphify_python
